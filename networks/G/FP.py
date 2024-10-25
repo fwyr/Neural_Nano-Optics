@@ -1,14 +1,14 @@
 # Neural feature propagator network
 
 import tensorflow as tf
-import tensorflow_addons as tfa
+import keras
 from metasurface.conv import deconvolve_wnr
 
 def conv(filters, size, stride, activation, apply_instnorm=True):
     result = tf.keras.Sequential()
     result.add(tf.keras.layers.Conv2D(filters, size, stride, padding='same', use_bias=True))
     if apply_instnorm:
-        result.add(tfa.layers.InstanceNormalization())
+        result.add(tf.keras.layers.GroupNormalization(groups=-1))
     if not activation == None:
         result.add(activation())
     return result
@@ -99,8 +99,7 @@ def FP(params, args):
     ew_4x  = tf.keras.layers.Input(shape=[h//4,w//4,3])
 
     ## Feature Extractor
-    deconv0, deconv1, deconv2, edge0, edge1, edge2 = \
-        feat_extract(inputs, tf.math.pow(10.0, snr), otf_1x, ew_1x, otf_2x, ew_2x, otf_4x, ew_4x, params, args)
+    deconv0, deconv1, deconv2, edge0, edge1, edge2 = feat_extract(inputs, tf.math.pow(10.0, snr), otf_1x, ew_1x, otf_2x, ew_2x, otf_4x, ew_4x, params, args)
     side = (h - params['out_width']) // 2
     deconv0 = deconv0[:,side:-side,side:-side,:]
     deconv1 = deconv1[:,side//2:-side//2,side//2:-side//2,:]

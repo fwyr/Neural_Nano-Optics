@@ -1,7 +1,7 @@
 import tensorflow as tf
 import tensorflow_probability as tfp
-import tensorflow_addons as tfa
 import numpy as np
+from PIL import Image
 
 # Make the phase function for even asphere polynomials.
 #num_coeffs = 8
@@ -65,7 +65,7 @@ def initialize_params(args):
   # PSF grid shape.
   # dim is set to work with the offset PSF training scheme
   if args.offset:
-      dim = np.int(2 * (np.size(params['theta_base']) - 1) - 1)
+      dim = int(2 * (np.size(params['theta_base']) - 1) - 1)
   else:
       dim = 5  # <-- TODO: Hack to get image size to be 720 x 720
   psfs_grid_shape = [dim, dim]
@@ -74,7 +74,7 @@ def initialize_params(args):
   # Square input image width based on max field angle (20 degrees)
   image_width = params['f'] * np.tan(20.0 * np.pi / 180.0) * np.sqrt(2)
   image_width = image_width * params['magnification'] / params['sensor_pixel']
-  params['image_width'] = np.int(2*dim * np.ceil(image_width / (2*dim) ))
+  params['image_width'] = int(2*dim * np.ceil(image_width / (2*dim) ))
 
   if args.conv == 'patch_size':
       # Patch sized image for training efficiency
@@ -416,7 +416,9 @@ def rotate_psfs(psf, params, rotate=True):
     angles = np.array([0.0, 45.0, 90.0, 135.0, 180.0, 225.0, 270.0, 315.0], dtype=np.float32)
     rot_angle = (np.random.choice(angles) * np.pi / 180.0).astype(np.float32)
   rot_angles = tf.fill([np.size(params['theta_base']) * np.size(params['phi_base'])], rot_angle)
-  psfs_rot = tfa.image.rotate(psfs, angles = rot_angles, interpolation = 'NEAREST')
+
+  psfs_rot = tf.keras.utils.array_to_img(psfs).rotate(rot_angles)
+  psfs_rot = tf.keras.utils.img_to_array(psfs)
   return psfs_rot
 
 # PSF patches are determined by rotating them into the different patch regions
@@ -546,7 +548,7 @@ def shifted_axicon_phase(s1, s2, params):
       r_max = r_phase[0, j, k]
       if r_max < R:
         if j <= params['pixels_aperture'] // 2 and k <= params['pixels_aperture'] // 2:
-          r_vector = np.linspace(0, r_max, np.int(samples * r_max / R))
+          r_vector = np.linspace(0, r_max, int(samples * r_max / R))
           numerator = r_vector * dr
           denominator = np.sqrt(r_vector ** 2 + (s1 + (s2 - s1) * r_vector / R) ** 2)
           integrand = numerator / denominator
